@@ -7,15 +7,46 @@
 #include <cassert>
 
 /****************************************************/
+#if 0
+typedef union jvalue {
+    jboolean    z;
+    jbyte       b;
+    jchar       c;
+    jshort      s;
+    jint        i;
+    jlong       j;
+    jfloat      f;
+    jdouble     d;
+    jobject     l;
+} jvalue;
+#endif
+
 enum JavaMethodType {
+    Unknown,
     Void,
+    Boolean,
+    Byte,
+    Char,
+    Short,
+    Int,
+    Long,
+    Float,
+    Double,
     Object
 };
 
 enum JavaMethodFlags {
-    Static = 0x01,
-    Nonvirtual = 0x02,
-    Constructor = 0x04
+    Static 		= 0x0001,
+    Nonvirtual 	= 0x0002,
+    Constructor = 0x0004,
+    Public 		= 0x0008,
+    Protected 	= 0x0010,
+    Private 	= 0x0020,
+    Final 		= 0x0080,
+    Native 		= 0x0100,
+    /*-----------------*/
+    Function	= 0x4000,
+    Field		= 0x8000
 };
 
 struct JavaMethod {
@@ -58,7 +89,7 @@ public:
     }
 
     /* method_name is uniq_name in methods table */
-    jobject call(const char *method_name, ...);
+    jvalue call(const char *method_name, ...);
 
 protected:
     JavaMethod *findMethod(const char *method_name);
@@ -74,13 +105,13 @@ private:
 template<>
 JavaMethod *JavaObject_common<jobject>::findMethod(const char *method_name);
 template<>
-jobject JavaObject_common<jobject>::call(const char *method_name, ...);
+jvalue JavaObject_common<jobject>::call(const char *method_name, ...);
 
 /************************ jclass *********************************/
 template<>
 JavaMethod *JavaObject_common<jclass>::findMethod(const char *method_name);
 template<>
-jobject JavaObject_common<jclass>::call(const char *method_name, ...);
+jvalue JavaObject_common<jclass>::call(const char *method_name, ...);
 
 /********************************************************/
 typedef JavaObject_common<jobject> JavaObject;

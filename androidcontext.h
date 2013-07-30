@@ -14,7 +14,6 @@ public:
     ClassLoader *clone(JNIEnv *env);
 
 private:
-
     jobject classLoader_;
     jmethodID methodID_;
     JNIEnv *env_;

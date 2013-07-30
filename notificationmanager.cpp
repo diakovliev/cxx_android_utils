@@ -10,37 +10,13 @@
 JavaGlobalRef<jobject> *NotificationManager::notificationManager_ = 0;
 JavaGlobalRef<jobject> *NotificationManager::notificationBuilder_ = 0;
 
-/**************************************************************************/
-static JavaMethod NotificationManager_Methods[] = {
-    { 0, Void, 0, "notify",    "notify",    "(ILandroid/app/Notification;)V" },
-    { 0, Void, 0, "notify2",   "notify",    "(Ljava/lang/String;ILandroid/app/Notification;)V" },
-    { 0, Void, 0, "cancel",    "cancel",    "(I)V" },
-    { 0, Void, 0, "cancel2",   "cancel",    "(Ljava/lang/String;I)V" },
-    { 0, Void, 0, "cancelAll", "cancelAll", "()V" },
-};
-#define NotificationManager_Methods_size (sizeof(NotificationManager_Methods)/sizeof(NotificationManager_Methods[0]))
+namespace JavaObjects {
 
-static JavaObjectDesc NotificationManager_Desc = {
-    NotificationManager_Methods,
-    NotificationManager_Methods_size
-};
+#include "jobjects/contextwrapper.h"
+#include "jobjects/notificationbuilder.h"
+#include "jobjects/notificationmanager.h"
 
-/**************************************************************************/
-static JavaMethod NotificationBuilder_Methods[] = {
-    { 0, Object, 0, "setContentTitle", "setContentTitle", "(Ljava/lang/CharSequence;)Landroid/app/Notification$Builder;" },
-    { 0, Object, 0, "setContentText",  "setContentText",  "(Ljava/lang/CharSequence;)Landroid/app/Notification$Builder;" },
-    { 0, Object, 0, "getNotification", "getNotification", "()Landroid/app/Notification;" },
-    { 0, Object, 0, "setSmallIcon",    "setSmallIcon",    "(I)Landroid/app/Notification$Builder;" },
-    { 0, Object, 0, "setLargeIcon",    "setLargeIcon",    "(Landroid/graphics/Bitmap;)Landroid/app/Notification$Builder;" },
-    { 0, Object, 0, "setAutoCancel",   "setAutoCancel",   "(Z)Landroid/app/Notification$Builder;" },
-    { 0, Object, 0, "setOnlyAlertOnce","setOnlyAlertOnce","(Z)Landroid/app/Notification$Builder;" },
-};
-#define NotificationBuilder_Methods_size (sizeof(NotificationBuilder_Methods)/sizeof(NotificationBuilder_Methods[0]))
-
-static JavaObjectDesc NotificationBuilder_Desc = {
-    NotificationBuilder_Methods,
-    NotificationBuilder_Methods_size
-};
+}
 
 /**************************************************************************/
 NotificationManager::NotificationManager()
@@ -81,17 +57,9 @@ bool NotificationManager::createJavaNotificationBuilder(std::weak_ptr<AttachedJE
     std::shared_ptr<AttachedJENV> jvm_ptr = jvm_weak.lock();
 
     bool ret = false;
-    jobject notificationBuilder = 0;
+    jvalue notificationBuilder;
     jclass notificationBuilderClass =
             jvm_ptr->classLoader()->loadClass("android.app.Notification$Builder");
-
-    JavaMethod jc_methods[] = {
-        { 0, Object, Constructor, "constructor", "<init>", "(Landroid/content/Context;)V" },
-    };
-    JavaObjectDesc jc_Desc = {
-        jc_methods,
-        sizeof(jc_methods)/sizeof(jc_methods[0])
-    };
 
     /* As class loaded by me create local reference to avoid surprises from java GC */
     std::shared_ptr<JavaLocalRef<jclass> > notifBuilderClassRef(jvm_ptr->createRef(notificationBuilderClass));
@@ -104,16 +72,16 @@ bool NotificationManager::createJavaNotificationBuilder(std::weak_ptr<AttachedJE
         return ret;
     }
 
-    std::shared_ptr<JavaClass> jc(jvm_ptr->createJO(notifBuilderClassRef->get(), &jc_Desc));
+    std::shared_ptr<JavaClass> jc(jvm_ptr->createJO(notifBuilderClassRef->get(), &JavaObjects::NotificationBuilder_Desc));
 
-    notificationBuilder = jc->call("constructor", AndroidContext::instance()->activity());
-    if (!notificationBuilder)
+    notificationBuilder = jc->call("<init>", AndroidContext::instance()->activity());
+    if (!notificationBuilder.l)
     {
         LOG(ANDROID_LOG_ERROR, ">>> Unable create Notification.Builder instance");
     }
     else
     {
-        notificationBuilder_ = jvm_ptr->createGlobalRef(notificationBuilder);
+        notificationBuilder_ = jvm_ptr->createGlobalRef(notificationBuilder.l);
     }
 
     LOG(ANDROID_LOG_INFO, ">>> Notification.Builder instance created");
@@ -129,20 +97,12 @@ bool NotificationManager::getJavaNotificationManager(std::weak_ptr<AttachedJENV>
 
     std::shared_ptr<AttachedJENV> jvm_ptr = jvm_weak.lock();
 
-    JavaMethod jactivity_methods[] = {
-        { 0, Object, 0, "getSystemService", "getSystemService", "(Ljava/lang/String;)Ljava/lang/Object;" },
-    };
-    JavaObjectDesc jactivityDesc = {
-        jactivity_methods,
-        sizeof(jactivity_methods)/sizeof(jactivity_methods[0])
-    };
-
     std::shared_ptr<JavaObject> jactivity(
-                    jvm_ptr->createJO(AndroidContext::instance()->activity(),&jactivityDesc));
+                    jvm_ptr->createJO(AndroidContext::instance()->activity(),&JavaObjects::ContextWrapper_Desc));
 
-    jobject notificationManager = jactivity->call("getSystemService",
+    jvalue notificationManager = jactivity->call("getSystemService",
                                           jvm_ptr->env()->NewStringUTF(NOTIFICATION_SERVICE_NAME));
-    notificationManager_ = jvm_ptr->createGlobalRef(notificationManager);
+    notificationManager_ = jvm_ptr->createGlobalRef(notificationManager.l);
 
 
     LOG(ANDROID_LOG_INFO, ">>> Notification service retrieved");
@@ -191,17 +151,17 @@ void NotificationManager::notify(jint id, const char *title, const char *text)
     }
 
     std::shared_ptr<JavaObject> nb(jvm_ptr->createJO(notificationBuilder_->get(),
-                                                     &NotificationBuilder_Desc));
+                                                     &JavaObjects::NotificationBuilder_Desc));
     nb->call("setAutoCancel", (jboolean)JNI_TRUE);
     nb->call("setContentTitle", jvm_ptr->env()->NewStringUTF(title));
     nb->call("setContentText", jvm_ptr->env()->NewStringUTF(text));
     nb->call("setSmallIcon", /*android.R.drawable.sym_action_email*/0x0108008f);
-    jobject notification = nb->call("getNotification");
-    if (notification)
+    jvalue notification = nb->call("getNotification");
+    if (notification.l)
     {
-        std::shared_ptr<JavaLocalRef<jobject> > notif(jvm_ptr->createRef(notification));
+        std::shared_ptr<JavaLocalRef<jobject> > notif(jvm_ptr->createRef(notification.l));
         std::shared_ptr<JavaObject> nm(jvm_ptr->createJO(notificationManager_->get(),
-                                                         &NotificationManager_Desc));
+                                                         &JavaObjects::NotificationManager_Desc));
         nm->call("notify", id, notif->get());
 
         LOG(ANDROID_LOG_INFO, ">>> Notification created succesfully");
@@ -210,7 +170,6 @@ void NotificationManager::notify(jint id, const char *title, const char *text)
     {
         LOG(ANDROID_LOG_ERROR, ">>> Unable to create Notification object");
     }
-
 }
 
 void NotificationManager::notify(const char *tag, int id, const char *title, const char *text)
@@ -229,18 +188,18 @@ void NotificationManager::notify(const char *tag, int id, const char *title, con
     }
 
     std::shared_ptr<JavaObject> nb(jvm_ptr->createJO(notificationBuilder_->get(),
-                                                     &NotificationBuilder_Desc));
+                                                     &JavaObjects::NotificationBuilder_Desc));
     nb->call("setAutoCancel", (jboolean)JNI_TRUE);
     nb->call("setContentTitle", jvm_ptr->env()->NewStringUTF(title));
     nb->call("setContentText", jvm_ptr->env()->NewStringUTF(text));
     nb->call("setSmallIcon", /*android.R.drawable.sym_action_email*/0x0108008f);
-    jobject notification = nb->call("getNotification");
-    if (notification)
+    jvalue notification = nb->call("getNotification");
+    if (notification.l)
     {
-        std::shared_ptr<JavaLocalRef<jobject> > notif(jvm_ptr->createRef(notification));
+        std::shared_ptr<JavaLocalRef<jobject> > notif(jvm_ptr->createRef(notification.l));
         std::shared_ptr<JavaObject> nm(jvm_ptr->createJO(notificationManager_->get(),
-                                                         &NotificationManager_Desc));
-        nm->call("notify2", jvm_ptr->env()->NewStringUTF(tag), id, notif->get());
+                                                         &JavaObjects::NotificationManager_Desc));
+        nm->call("notify_0", jvm_ptr->env()->NewStringUTF(tag), id, notif->get());
 
         LOG(ANDROID_LOG_INFO, ">>> Notification created succesfully");
     }
@@ -248,7 +207,6 @@ void NotificationManager::notify(const char *tag, int id, const char *title, con
     {
         LOG(ANDROID_LOG_ERROR, ">>> Unable to create Notification object");
     }
-
 }
 
 void NotificationManager::cancel(int id)
@@ -267,7 +225,7 @@ void NotificationManager::cancel(int id)
     }
 
     std::shared_ptr<JavaObject> nm(jvm_ptr->createJO(notificationManager_->get(),
-                                                     &NotificationManager_Desc));
+                                                     &JavaObjects::NotificationManager_Desc));
     nm->call("cancel", id);
 
     LOG(ANDROID_LOG_INFO, ">>> Notification id:%d canceled succesfully", id);
@@ -289,8 +247,8 @@ void NotificationManager::cancel(const char *tag, int id)
     }
 
     std::shared_ptr<JavaObject> nm(jvm_ptr->createJO(notificationManager_->get(),
-                                                     &NotificationManager_Desc));
-    nm->call("cancel2", jvm_ptr->env()->NewStringUTF(tag), id);
+                                                     &JavaObjects::NotificationManager_Desc));
+    nm->call("cancel_1", jvm_ptr->env()->NewStringUTF(tag), id);
 
     LOG(ANDROID_LOG_INFO, ">>> Notification tag:'%s' id:%d canceled succesfully", tag, id);
 }
@@ -311,7 +269,7 @@ void NotificationManager::cancelAll()
     }
 
     std::shared_ptr<JavaObject> nm(jvm_ptr->createJO(notificationManager_->get(),
-                                                     &NotificationManager_Desc));
+                                                     &JavaObjects::NotificationManager_Desc));
     nm->call("cancelAll");
 
     LOG(ANDROID_LOG_INFO, ">>> All notification canceled succesfully");

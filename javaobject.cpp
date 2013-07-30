@@ -51,23 +51,55 @@ JavaMethod *JavaObject_common<jobject>::findMethod(const char *method_name)
 }
 
 template<>
-jobject JavaObject_common<jobject>::call(const char *method_name, ...)
+jvalue JavaObject_common<jobject>::call(const char *method_name, ...)
 {
     va_list ap;
     va_start(ap,method_name);
 
-    jobject result = 0;
+    jvalue result;
+    memset(&result, 0, sizeof(result));
 
     JavaMethod *method = JavaObject_common<jobject>::findMethod(method_name);
     if (method)
     {
+        if (method->flags & (Private|Protected))
+        {
+            LOG(ANDROID_LOG_INFO, ">> Attempt to call private or protected method (%s)", method_name);
+        }
         switch(method->type)
         {
+        case Unknown:
+            LOG(ANDROID_LOG_ERROR, ">> Unsupported method type (%s)", method_name);
+        break;
         case Void:
             env_->CallVoidMethodV(obj_, method->id, ap);
         break;
         case Object:
-            result = env_->CallObjectMethodV(obj_, method->id, ap);
+            result.l = env_->CallObjectMethodV(obj_, method->id, ap);
+        break;
+		case Boolean:
+            result.z = env_->CallBooleanMethodV(obj_, method->id, ap);
+		break;
+        case Byte:
+            result.b = env_->CallByteMethodV(obj_, method->id, ap);
+        break;
+        case Char:
+            result.c = env_->CallCharMethodV(obj_, method->id, ap);
+        break;
+        case Short:
+            result.s = env_->CallShortMethodV(obj_, method->id, ap);
+        break;
+        case Int:
+            result.i = env_->CallIntMethodV(obj_, method->id, ap);
+        break;
+        case Long:
+            result.j = env_->CallLongMethodV(obj_, method->id, ap);
+        break;
+        case Float:
+            result.f = env_->CallFloatMethodV(obj_, method->id, ap);
+        break;
+        case Double:
+            result.d = env_->CallDoubleMethodV(obj_, method->id, ap);
         break;
         default:;
         }
@@ -120,32 +152,68 @@ JavaMethod *JavaObject_common<jclass>::findMethod(const char *method_name)
 }
 
 template<>
-jobject JavaObject_common<jclass>::call(const char *method_name, ...)
+jvalue JavaObject_common<jclass>::call(const char *method_name, ...)
 {
     va_list ap;
     va_start(ap,method_name);
 
-    jobject result = 0;
+    jvalue result;
+    memset(&result, 0, sizeof(result));
 
     JavaMethod *method = JavaObject_common<jclass>::findMethod(method_name);
     if (method)
     {
         if (!(method->flags & Constructor))
         {
+            if (method->flags & (Private|Protected))
+            {
+                LOG(ANDROID_LOG_INFO, ">> Attempt to call private or protected method (%s)", method_name);
+            }
             switch(method->type)
             {
+            case Unknown:
+                LOG(ANDROID_LOG_ERROR, ">> Unsupported method type (%s)", method_name);
+            break;
             case Void:
                 env_->CallStaticVoidMethodV(obj_, method->id, ap);
             break;
             case Object:
-                result = env_->CallStaticObjectMethodV(obj_, method->id, ap);
+                result.l = env_->CallStaticObjectMethodV(obj_, method->id, ap);
+            break;
+            case Boolean:
+                result.z = env_->CallStaticBooleanMethodV(obj_, method->id, ap);
+            break;
+            case Byte:
+                result.b = env_->CallStaticByteMethodV(obj_, method->id, ap);
+            break;
+            case Char:
+                result.c = env_->CallStaticCharMethodV(obj_, method->id, ap);
+            break;
+            case Short:
+                result.s = env_->CallStaticShortMethodV(obj_, method->id, ap);
+            break;
+            case Int:
+                result.i = env_->CallStaticIntMethodV(obj_, method->id, ap);
+            break;
+            case Long:
+                result.j = env_->CallStaticLongMethodV(obj_, method->id, ap);
+            break;
+            case Float:
+                result.f = env_->CallStaticFloatMethodV(obj_, method->id, ap);
+            break;
+            case Double:
+                result.d = env_->CallStaticDoubleMethodV(obj_, method->id, ap);
             break;
             default:;
             }
         }
         else
         {
-            result = env_->NewObjectV(obj_, method->id, ap);
+            if (method->flags & (Private|Protected))
+            {
+                LOG(ANDROID_LOG_INFO, ">> Attempt to call private or protected constructor (%s)", method_name);
+            }
+            result.l = env_->NewObjectV(obj_, method->id, ap);
         }
     }
 
