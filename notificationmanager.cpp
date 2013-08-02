@@ -29,9 +29,9 @@ NotificationManager::~NotificationManager()
 
 void NotificationManager::freeJavaResources(std::weak_ptr<AttachedJENV> jvm_weak)
 {
-    if (!notificationManager_ && notificationBuilder_)
+    if (notificationManager_ && notificationBuilder_)
     {
-        LOG(ANDROID_LOG_INFO, ">>> Nothing to free");
+        LOG(ANDROID_LOG_INFO, "Nothing to free");
         return;
     }
 
@@ -68,7 +68,7 @@ bool NotificationManager::createJavaNotificationBuilder(std::weak_ptr<AttachedJE
 
     if (!notificationBuilderClass)
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Unable to get Notification.Builder class");
+        LOG(ANDROID_LOG_ERROR, "Unable to get Notification.Builder class");
         return ret;
     }
 
@@ -77,14 +77,14 @@ bool NotificationManager::createJavaNotificationBuilder(std::weak_ptr<AttachedJE
     notificationBuilder = jc->call("<init>", AndroidContext::instance()->activity());
     if (!notificationBuilder.l)
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Unable create Notification.Builder instance");
+        LOG(ANDROID_LOG_ERROR, "Unable create Notification.Builder instance");
     }
     else
     {
         notificationBuilder_ = jvm_ptr->createGlobalRef(notificationBuilder.l);
     }
 
-    LOG(ANDROID_LOG_INFO, ">>> Notification.Builder instance created");
+    LOG(ANDROID_LOG_INFO, "Notification.Builder instance created");
 
     if (notificationBuilder_) ret = true;
 
@@ -105,7 +105,7 @@ bool NotificationManager::getJavaNotificationManager(std::weak_ptr<AttachedJENV>
     notificationManager_ = jvm_ptr->createGlobalRef(notificationManager.l);
 
 
-    LOG(ANDROID_LOG_INFO, ">>> Notification service retrieved");
+    LOG(ANDROID_LOG_INFO, "Notification service retrieved");
 
     if (notificationManager_) ret = true;
     return ret;
@@ -129,7 +129,7 @@ bool NotificationManager::initializeStatics(std::weak_ptr<AttachedJENV> jvm_weak
         }
         if (!init)
         {
-            LOG(ANDROID_LOG_ERROR, ">>> Unable to init java objects");
+            LOG(ANDROID_LOG_ERROR, "Unable to init java objects");
         }
     }
     return init;
@@ -140,13 +140,13 @@ void NotificationManager::notify(jint id, const char *title, const char *text)
     std::shared_ptr<AttachedJENV> jvm_ptr(new AttachedJENV());
     if (!jvm_ptr->attached())
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Unable to get VM");
+        LOG(ANDROID_LOG_ERROR, "Unable to get VM");
         return;
     }
 
     if (!initializeStatics(jvm_ptr))
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Unable to init internal objects");
+        LOG(ANDROID_LOG_ERROR, "Unable to init internal objects");
         return;
     }
 
@@ -164,11 +164,11 @@ void NotificationManager::notify(jint id, const char *title, const char *text)
                                                          &JavaObjects::NotificationManager_Desc));
         nm->call("notify", id, notif->get());
 
-        LOG(ANDROID_LOG_INFO, ">>> Notification created succesfully");
+        LOG(ANDROID_LOG_INFO, "Notification created succesfully");
     }
     else
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Unable to create Notification object");
+        LOG(ANDROID_LOG_ERROR, "Unable to create Notification object");
     }
 }
 
@@ -177,13 +177,13 @@ void NotificationManager::notify(const char *tag, int id, const char *title, con
     std::shared_ptr<AttachedJENV> jvm_ptr(new AttachedJENV());
     if (!jvm_ptr->attached())
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Unable to get VM");
+        LOG(ANDROID_LOG_ERROR, "Unable to get VM");
         return;
     }
 
     if (!initializeStatics(jvm_ptr))
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Unable to init internal objects");
+        LOG(ANDROID_LOG_ERROR, "Unable to init internal objects");
         return;
     }
 
@@ -201,11 +201,11 @@ void NotificationManager::notify(const char *tag, int id, const char *title, con
                                                          &JavaObjects::NotificationManager_Desc));
         nm->call("notify_0", jvm_ptr->env()->NewStringUTF(tag), id, notif->get());
 
-        LOG(ANDROID_LOG_INFO, ">>> Notification created succesfully");
+        LOG(ANDROID_LOG_INFO, "Notification created succesfully");
     }
     else
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Unable to create Notification object");
+        LOG(ANDROID_LOG_ERROR, "Unable to create Notification object");
     }
 }
 
@@ -214,13 +214,13 @@ void NotificationManager::cancel(int id)
     std::shared_ptr<AttachedJENV> jvm_ptr(new AttachedJENV());
     if (!jvm_ptr->attached())
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Unable to get VM");
+        LOG(ANDROID_LOG_ERROR, "Unable to get VM");
         return;
     }
 
     if (!initializeStatics(jvm_ptr))
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Unable to init internal objects");
+        LOG(ANDROID_LOG_ERROR, "Unable to init internal objects");
         return;
     }
 
@@ -228,7 +228,7 @@ void NotificationManager::cancel(int id)
                                                      &JavaObjects::NotificationManager_Desc));
     nm->call("cancel", id);
 
-    LOG(ANDROID_LOG_INFO, ">>> Notification id:%d canceled succesfully", id);
+    LOG(ANDROID_LOG_INFO, "Notification id:%d canceled succesfully", id);
 }
 
 void NotificationManager::cancel(const char *tag, int id)
@@ -236,13 +236,13 @@ void NotificationManager::cancel(const char *tag, int id)
     std::shared_ptr<AttachedJENV> jvm_ptr(new AttachedJENV());
     if (!jvm_ptr->attached())
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Unable to get VM");
+        LOG(ANDROID_LOG_ERROR, "Unable to get VM");
         return;
     }
 
     if (!initializeStatics(jvm_ptr))
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Unable to init internal objects");
+        LOG(ANDROID_LOG_ERROR, "Unable to init internal objects");
         return;
     }
 
@@ -250,7 +250,7 @@ void NotificationManager::cancel(const char *tag, int id)
                                                      &JavaObjects::NotificationManager_Desc));
     nm->call("cancel_1", jvm_ptr->env()->NewStringUTF(tag), id);
 
-    LOG(ANDROID_LOG_INFO, ">>> Notification tag:'%s' id:%d canceled succesfully", tag, id);
+    LOG(ANDROID_LOG_INFO, "Notification tag:'%s' id:%d canceled succesfully", tag, id);
 }
 
 void NotificationManager::cancelAll()
@@ -258,13 +258,13 @@ void NotificationManager::cancelAll()
     std::shared_ptr<AttachedJENV> jvm_ptr(new AttachedJENV());
     if (!jvm_ptr->attached())
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Unable to get VM");
+        LOG(ANDROID_LOG_ERROR, "Unable to get VM");
         return;
     }
 
     if (!initializeStatics(jvm_ptr))
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Unable to init internal objects");
+        LOG(ANDROID_LOG_ERROR, "Unable to init internal objects");
         return;
     }
 
@@ -272,5 +272,5 @@ void NotificationManager::cancelAll()
                                                      &JavaObjects::NotificationManager_Desc));
     nm->call("cancelAll");
 
-    LOG(ANDROID_LOG_INFO, ">>> All notification canceled succesfully");
+    LOG(ANDROID_LOG_INFO, "All notification canceled succesfully");
 }

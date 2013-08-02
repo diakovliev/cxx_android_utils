@@ -36,14 +36,13 @@ enum JavaMethodType {
 };
 
 enum JavaMethodFlags {
-    Static 		= 0x0001,
-    Nonvirtual 	= 0x0002,
-    Constructor = 0x0004,
+    Constructor = 0x0001,
+    Private 	= 0x0002,
+    Protected 	= 0x0004,
     Public 		= 0x0008,
-    Protected 	= 0x0010,
-    Private 	= 0x0020,
-    Final 		= 0x0080,
-    Native 		= 0x0100,
+    Static 		= 0x0010,
+    Final 		= 0x0020,
+    Native 		= 0x0040,
     /*-----------------*/
     Function	= 0x4000,
     Field		= 0x8000

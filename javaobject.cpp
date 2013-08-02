@@ -14,7 +14,7 @@ JavaMethod *JavaObject_common<jobject>::findMethod(const char *method_name)
         if (!strcmp(methods_[i].uniq_name, method_name))
         {
             method = &methods_[i];
-            LOG(ANDROID_LOG_INFO, ">> JavaMethod: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } found",
+            LOG(ANDROID_LOG_INFO, "JavaMethod: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } found",
                 method->id, method->type, method->flags, method->uniq_name, method->name, method->sig);
             break;
         }
@@ -27,14 +27,14 @@ JavaMethod *JavaObject_common<jobject>::findMethod(const char *method_name)
             method->id = env_->GetMethodID(clazz, method->name, method->sig);
             if (!method->id)
             {
-                LOG(ANDROID_LOG_WARN, ">> No method with name: %s trying superclass", method_name);
+                LOG(ANDROID_LOG_WARN, "No method with name: %s trying superclass", method_name);
                 env_->ExceptionClear();
                 /* try to find in superclass */
                 clazz = env_->GetSuperclass(clazz);
             }
             else
             {
-                LOG(ANDROID_LOG_INFO, ">> JavaMethod: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } id found",
+                LOG(ANDROID_LOG_INFO, "JavaMethod: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } id found",
                     method->id, method->type, method->flags, method->uniq_name, method->name, method->sig);
             }
         }
@@ -45,7 +45,7 @@ JavaMethod *JavaObject_common<jobject>::findMethod(const char *method_name)
     }
     if (!method)
     {
-        LOG(ANDROID_LOG_ERROR, ">> No method with name: %s", method_name);
+        LOG(ANDROID_LOG_ERROR, "No method with name: %s", method_name);
     }
     return method;
 }
@@ -64,12 +64,12 @@ jvalue JavaObject_common<jobject>::call(const char *method_name, ...)
     {
         if (method->flags & (Private|Protected))
         {
-            LOG(ANDROID_LOG_INFO, ">> Attempt to call private or protected method (%s)", method_name);
+            LOG(ANDROID_LOG_INFO, "Attempt to call private or protected method (%s)", method_name);
         }
         switch(method->type)
         {
         case Unknown:
-            LOG(ANDROID_LOG_ERROR, ">> Unsupported method type (%s)", method_name);
+            LOG(ANDROID_LOG_ERROR, "Unsupported method type (%s)", method_name);
         break;
         case Void:
             env_->CallVoidMethodV(obj_, method->id, ap);
@@ -120,7 +120,7 @@ JavaMethod *JavaObject_common<jclass>::findMethod(const char *method_name)
         if (!strcmp(methods_[i].uniq_name, method_name))
         {
             method = &methods_[i];
-            LOG(ANDROID_LOG_INFO, ">> JavaMethod: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } found",
+            LOG(ANDROID_LOG_INFO, "JavaMethod: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } found",
                 method->id, method->type, method->flags, method->uniq_name, method->name, method->sig);
             break;
         }
@@ -130,13 +130,13 @@ JavaMethod *JavaObject_common<jclass>::findMethod(const char *method_name)
         if (!(method->flags & Constructor))
         {
             method->id = env_->GetStaticMethodID(obj_, method->name, method->sig);
-            LOG(ANDROID_LOG_INFO, ">> JavaMethod: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } id found",
+            LOG(ANDROID_LOG_INFO, "JavaMethod: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } id found",
                 method->id, method->type, method->flags, method->uniq_name, method->name, method->sig);
         }
         else
         {
             method->id = env_->GetMethodID(obj_, method->name, method->sig);
-            LOG(ANDROID_LOG_INFO, ">> JavaMethod: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } id found",
+            LOG(ANDROID_LOG_INFO, "JavaMethod: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } id found",
                 method->id, method->type, method->flags, method->uniq_name, method->name, method->sig);
         }
     }
@@ -146,7 +146,7 @@ JavaMethod *JavaObject_common<jclass>::findMethod(const char *method_name)
     }
     if (!method)
     {
-        LOG(ANDROID_LOG_ERROR, ">> No method with name: %s", method_name);
+        LOG(ANDROID_LOG_ERROR, "No method with name: %s", method_name);
     }
     return method;
 }
@@ -167,12 +167,12 @@ jvalue JavaObject_common<jclass>::call(const char *method_name, ...)
         {
             if (method->flags & (Private|Protected))
             {
-                LOG(ANDROID_LOG_INFO, ">> Attempt to call private or protected method (%s)", method_name);
+                LOG(ANDROID_LOG_INFO, "Attempt to call private or protected method (%s)", method_name);
             }
             switch(method->type)
             {
             case Unknown:
-                LOG(ANDROID_LOG_ERROR, ">> Unsupported method type (%s)", method_name);
+                LOG(ANDROID_LOG_ERROR, "Unsupported method type (%s)", method_name);
             break;
             case Void:
                 env_->CallStaticVoidMethodV(obj_, method->id, ap);
@@ -211,7 +211,7 @@ jvalue JavaObject_common<jclass>::call(const char *method_name, ...)
         {
             if (method->flags & (Private|Protected))
             {
-                LOG(ANDROID_LOG_INFO, ">> Attempt to call private or protected constructor (%s)", method_name);
+                LOG(ANDROID_LOG_INFO, "Attempt to call private or protected constructor (%s)", method_name);
             }
             result.l = env_->NewObjectV(obj_, method->id, ap);
         }

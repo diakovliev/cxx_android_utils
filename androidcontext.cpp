@@ -25,14 +25,14 @@ AttachedJENV::AttachedJENV()
     {
         if (jvm_->AttachCurrentThread(&env_, NULL) < 0)
         {
-            LOG(ANDROID_LOG_ERROR, ">>> AttachCurrentThread failed");
+            LOG(ANDROID_LOG_ERROR, "AttachCurrentThread failed");
             env_ = NULL;
         }
         attached_ = true;
     }
     else
     {
-        LOG(ANDROID_LOG_ERROR, ">>> GetEnv failed");
+        LOG(ANDROID_LOG_ERROR, "GetEnv failed");
     }
 }
 
@@ -55,7 +55,7 @@ void AttachedJENV::exceptionsHandler(const char *file, int line)
 {
     if (env_->ExceptionOccurred())
     {
-        LOG(ANDROID_LOG_ERROR, ">>> Java exception occured at %s:%d", file, line);
+        LOG(ANDROID_LOG_ERROR, "Java exception occured at %s:%d", file, line);
         env_->ExceptionDescribe();
         env_->ExceptionClear();
     }
@@ -70,6 +70,7 @@ ClassLoader *AttachedJENV::classLoader()
 {
     if (!classLoader_.get())
     {
+        // Create classLoader instance associated with current thread
         classLoader_.reset(AndroidContext::instance()->classLoader()->clone(env_));
     }
     return classLoader_.get();
@@ -135,19 +136,19 @@ bool AndroidContext::initialize(JavaVM *jvm/*, JNIEnv* env*/)
 
     JNIEnv* env;
     if (jvm_->GetEnv(reinterpret_cast<void**>(&env), JNI_VERSION_1_6) != JNI_OK) {
-        LOG(ANDROID_LOG_FATAL, ">>> GetEnv failed");
+        LOG(ANDROID_LOG_FATAL, "GetEnv failed");
         return -JNI_FALSE;
     }
 
     if (env)
     {
-        LOG(ANDROID_LOG_INFO, ">>> Loading class '%s'", QT_APPLICATION_CLASS_NAME);
+        LOG(ANDROID_LOG_INFO, "Loading class '%s'", QT_APPLICATION_CLASS_NAME);
 
         qtNativeClass_ = env->FindClass(QT_APPLICATION_CLASS_NAME);
 
         if (!qtNativeClass_)
         {
-            LOG(ANDROID_LOG_ERROR, ">>> Class not found '%s'", QT_APPLICATION_CLASS_NAME);
+            LOG(ANDROID_LOG_ERROR, "Class not found '%s'", QT_APPLICATION_CLASS_NAME);
         }
         else
         {
@@ -161,7 +162,7 @@ bool AndroidContext::initialize(JavaVM *jvm/*, JNIEnv* env*/)
             jobject classLoader = env->NewGlobalRef(env->CallStaticObjectMethod(qtNativeClass_, methodID));
             if (!classLoader)
             {
-                LOG(ANDROID_LOG_ERROR, ">>> Unable to get class loader");
+                LOG(ANDROID_LOG_ERROR, "Unable to get class loader");
             }
 
             jclass classLoaderClass = env->GetObjectClass(classLoader);
@@ -172,11 +173,11 @@ bool AndroidContext::initialize(JavaVM *jvm/*, JNIEnv* env*/)
                                               QT_APPLICATION_GET_ACTIVITY_METHOD,
                                               QT_APPLICATION_GET_ACTIVITY_METHOD_SIG);
 
-            LOG(ANDROID_LOG_INFO, ">>> Get activity");
+            LOG(ANDROID_LOG_INFO, "Get activity");
 
             if (!methodID)
             {
-                LOG(ANDROID_LOG_ERROR, ">> Can't find method '%s(%s)'",
+                LOG(ANDROID_LOG_ERROR, "Can't find method '%s(%s)'",
                                     QT_APPLICATION_GET_ACTIVITY_METHOD, QT_APPLICATION_GET_ACTIVITY_METHOD_SIG);
             }
             else
@@ -189,7 +190,7 @@ bool AndroidContext::initialize(JavaVM *jvm/*, JNIEnv* env*/)
                 }
                 else
                 {
-                    LOG(ANDROID_LOG_ERROR, ">>> Get activity failed");
+                    LOG(ANDROID_LOG_ERROR, "Get activity failed");
                 }
             }
         }
@@ -214,16 +215,16 @@ JNIEXPORT jint JNI_OnLoad(JavaVM* vm, void* reserved)
 {
     reserved = reserved;
 
-    LOG(ANDROID_LOG_INFO, ">>> Android context initialization...");
+    LOG(ANDROID_LOG_INFO, "Android context initialization...");
 
     AndroidContext *context = AndroidContext::instance();
     if (!context->initialize(vm))
     {
-        LOG(ANDROID_LOG_FATAL, ">>> Android context initialization failed");
+        LOG(ANDROID_LOG_FATAL, "Android context initialization failed");
         return -1;
     }
 
-    LOG(ANDROID_LOG_INFO, ">>> Android context initialization done");
+    LOG(ANDROID_LOG_INFO, "Android context initialization done");
 
     return JNI_VERSION_1_4;
 }
