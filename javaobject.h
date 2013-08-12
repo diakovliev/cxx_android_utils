@@ -120,7 +120,7 @@ private:
 
 /************************ jobject *********************************/
 template<>
-JavaMember *JavaObject_common<jobject>::findMember(const char *method_name);
+JavaMember *JavaObject_common<jobject>::findMember(const char *member_name);
 template<>
 JavaMemberId JavaObject_common<jobject>::getMemberId(JavaMember *member);
 template<>
@@ -134,7 +134,7 @@ void JavaObject_common<jobject>::set(const char *field_name, jvalue value);
 
 /************************ jclass *********************************/
 template<>
-JavaMember *JavaObject_common<jclass>::findMember(const char *method_name);
+JavaMember *JavaObject_common<jclass>::findMember(const char *member_name);
 template<>
 JavaMemberId JavaObject_common<jclass>::getMemberId(JavaMember *member);
 template<>
