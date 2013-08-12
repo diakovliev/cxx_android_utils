@@ -68,6 +68,27 @@ class FunctionType:
 
 #---------------------------------------------------------
 #---------------------------------------------------------
+class FieldType:
+        values = (  { "name":"Boolean",		"re":"^Z" },
+                    { "name":"Byte",		"re":"^B" },
+                    { "name":"Char",		"re":"^C" },
+                    { "name":"Short",		"re":"^S" },
+                    { "name":"Int",			"re":"^I" },
+                    { "name":"Long",		"re":"^J" },
+                    { "name":"Float",		"re":"^F" },
+                    { "name":"Double",		"re":"^D" },
+                    { "name":"Object",		"re":"(^L)|(^\[)" } )
+
+        def getFieldType(self, signature):
+                res = "Unknown"
+                for val in self.values:
+                        if re.search(val["re"], signature) != None:
+                                res = val["name"]
+                                break
+                return res
+
+#---------------------------------------------------------
+#---------------------------------------------------------
 class MemberDefinition:
 	definition  = ""
 	type		= ""
@@ -93,7 +114,7 @@ class MemberDefinition:
 
 	def printStruct(self, uniq_name):
 		print "  /* %s */" % self.definition
-		print "  { 0, %s, %s, \"%s\", \"%s\", \"%s\" }," % \
+		print "  { %s, %s, \"%s\", \"%s\", \"%s\" }," % \
 			( self.functionType, self.flags, uniq_name, self.name, self.signature)
 
 	def parceDefinition(self, definition, sig):
@@ -121,7 +142,7 @@ class MemberDefinition:
 			ft = FunctionType()
 			functionType = ft.getFunctionType(signature)
 		else:
-			if re.search("\(.*\)( throws.*)?;",defcp) != None:
+			if re.search("\(.*\)(.*throws.*)?;",defcp) != None:
 				flagsList.append("Function")
 				type = MemberType.Function
 				name = self.functionName(defcp)
@@ -131,6 +152,8 @@ class MemberDefinition:
 				flagsList.append("Field")
 				type = MemberType.Field
 				name = self.fieldName(defcp)
+				ft = FieldType();
+				functionType = ft.getFieldType(signature)
 
 		flags = "|".join(flagsList)
 		self.type = type

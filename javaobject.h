@@ -5,6 +5,8 @@
 #include <cstddef>
 #include <memory>
 #include <cassert>
+#include <map>
+#include <string>
 
 /****************************************************/
 #if 0
@@ -48,8 +50,12 @@ enum JavaMethodFlags {
     Field		= 0x8000
 };
 
-struct JavaMethod {
-    jmethodID id;
+union JavaMemberId {
+    jmethodID functionid;
+    jfieldID fieldid;
+};
+
+struct JavaMember {
     JavaMethodType type;
     unsigned flags;
     const char *uniq_name;
@@ -58,7 +64,7 @@ struct JavaMethod {
 };
 
 struct JavaObjectDesc {
-    JavaMethod *methods;
+    JavaMember *methods;
     size_t msize;
 };
 
@@ -67,19 +73,21 @@ class JavaObject_common {
 public:
 
     /* regular constructor */
-    JavaObject_common(JNIEnv *env, const T &obj, JavaMethod *methods, size_t methods_size)
+    JavaObject_common(JNIEnv *env, const T &obj, JavaMember *methods, size_t methods_size)
         : obj_(obj)
-        , methods_(methods)
-        , methods_size_(methods_size)
+        , members_(methods)
+        , members_size_(methods_size)
         , env_(env)
+        , members_ids_()
     {
     }
 
     JavaObject_common(JNIEnv *env, const T &obj, JavaObjectDesc *desc)
         : obj_(obj)
-        , methods_(desc->methods)
-        , methods_size_(desc->msize)
+        , members_(desc->methods)
+        , members_size_(desc->msize)
         , env_(env)
+        , members_ids_()
     {
     }
 
@@ -90,27 +98,53 @@ public:
     /* method_name is uniq_name in methods table */
     jvalue call(const char *method_name, ...);
 
+    /* get field */
+    jvalue get(const char *field_name);
+
+    /* set field */
+    void set(const char *field_name, jvalue value);
+
 protected:
-    JavaMethod *findMethod(const char *method_name);
+    JavaMember *findMember(const char *method_name);
+    JavaMemberId getMemberId(JavaMember *member);
 
 private:
     T obj_;
-    JavaMethod *methods_;
-    size_t methods_size_;
+    JavaMember *members_;
+    size_t members_size_;
     JNIEnv *env_;
+
+    typedef std::map<std::string, JavaMemberId> members_ids_map_type;
+    members_ids_map_type members_ids_;
 };
 
 /************************ jobject *********************************/
 template<>
-JavaMethod *JavaObject_common<jobject>::findMethod(const char *method_name);
+JavaMember *JavaObject_common<jobject>::findMember(const char *method_name);
+template<>
+JavaMemberId JavaObject_common<jobject>::getMemberId(JavaMember *member);
 template<>
 jvalue JavaObject_common<jobject>::call(const char *method_name, ...);
+/* get field */
+template<>
+jvalue JavaObject_common<jobject>::get(const char *field_name);
+/* set field */
+template<>
+void JavaObject_common<jobject>::set(const char *field_name, jvalue value);
 
 /************************ jclass *********************************/
 template<>
-JavaMethod *JavaObject_common<jclass>::findMethod(const char *method_name);
+JavaMember *JavaObject_common<jclass>::findMember(const char *method_name);
+template<>
+JavaMemberId JavaObject_common<jclass>::getMemberId(JavaMember *member);
 template<>
 jvalue JavaObject_common<jclass>::call(const char *method_name, ...);
+/* get field */
+template<>
+jvalue JavaObject_common<jclass>::get(const char *field_name);
+/* set field */
+template<>
+void JavaObject_common<jclass>::set(const char *field_name, jvalue value);
 
 /********************************************************/
 typedef JavaObject_common<jobject> JavaObject;

@@ -17,14 +17,17 @@ public:
 
     static void freeJavaResources(std::weak_ptr<AttachedJENV> jvm_weak);
 
+protected:
+    jint getIconIndex(std::weak_ptr<AttachedJENV> jvm_weak);
+
 private:
     static bool getJavaNotificationManager(std::weak_ptr<AttachedJENV> jvm_weak);
     static bool createJavaNotificationBuilder(std::weak_ptr<AttachedJENV> jvm_weak);
     static bool initializeStatics(std::weak_ptr<AttachedJENV> jvm_weak);
 
 private:
-    static JavaGlobalRef<jobject> *notificationManager_;
-    static JavaGlobalRef<jobject> *notificationBuilder_;
+    static std::shared_ptr<JavaGlobalRef<jobject> > notificationManager_;
+    static std::shared_ptr<JavaGlobalRef<jobject> > notificationBuilder_;
 
 };
 

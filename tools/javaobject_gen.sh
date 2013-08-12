@@ -21,7 +21,7 @@ echo " */"
 echo "#ifndef _${MARRAY_NAME}_genheader"
 echo "#define _${MARRAY_NAME}_genheader"
 echo ""
-echo "static JavaMethod ${MARRAY_NAME}[] = {"
+echo "static JavaMember ${MARRAY_NAME}[] = {"
 
 javap -s -p -classpath "$ANDROID_JAR" "$PACKAGE.$CLASS" | ./parce_def.py
 

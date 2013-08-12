@@ -3,6 +3,10 @@
 
 #include "javaobject.h"
 
+#ifdef __EXCEPTIONS_SUPPORT__
+#include <stdexcept>
+#endif
+
 /****************************************************/
 class ClassLoader
 {
@@ -11,6 +15,8 @@ public:
 
     jclass loadClass(const char *name);
 
+protected:
+    friend class AttachedJENV;
     ClassLoader *clone(JNIEnv *env);
 
 private:
@@ -19,6 +25,20 @@ private:
     JNIEnv *env_;
 
 };
+
+#ifdef __EXCEPTIONS_SUPPORT__
+
+/****************************************************/
+class NotAttachedJENV: public std::runtime_error
+{
+public:
+    NotAttachedJENV()
+        : std::runtime_error("Attempt to use not attached JNIEnv")
+    {
+    }
+};
+
+#endif
 
 /****************************************************/
 class AttachedJENV
@@ -34,51 +54,75 @@ public:
 
     JNIEnv *env();
     bool attached();
-
-    template<typename T>
-    JavaObject_common<T> *createJO(const T &obj, JavaMethod *methods, size_t methods_size)
-    {
-        if (attached())
-        {
-            JavaObject_common<T> *res = new JavaObject_common<T>(env_, obj, methods, methods_size);
-            return res;
-        }
-        else
-        {
-            return 0;
-        }
-    }
-
-    template<typename T>
-    JavaObject_common<T> *createJO(const T &obj, JavaObjectDesc *desc)
-    {
-        if (attached())
-        {
-            JavaObject_common<T> *res = new JavaObject_common<T>(env_, obj, desc);
-            return res;
-        }
-        else
-        {
-            return 0;
-        }
-    }
-
-    ClassLoader *classLoader();
-
+    std::shared_ptr<ClassLoader> classLoader();
     void exceptionsHandler(const char *file, int line);
 
     template<typename T>
-    JavaLocalRef<T> *createRef(const T &obj)
+    std::shared_ptr<JavaObject_common<T> > createJO(const T &obj, JavaMember *methods, size_t methods_size)
     {
-        JavaLocalRef<T> *res = new JavaLocalRef<T>(env_, obj);
-        return res;
+        JavaObject_common<T> *res = 0;
+        if (attached())
+        {
+            res = new JavaObject_common<T>(env_, obj, methods, methods_size);
+        }
+#ifdef __EXCEPTIONS_SUPPORT__
+        else
+        {
+            throw NotAttachedJENV();
+        }
+#endif
+        return std::shared_ptr<JavaObject_common<T> >(res);
     }
 
     template<typename T>
-    JavaGlobalRef<T> *createGlobalRef(const T &obj)
+    std::shared_ptr<JavaObject_common<T> > createJO(const T &obj, JavaObjectDesc *desc)
     {
-        JavaGlobalRef<T> *res = new JavaGlobalRef<T>(env_, obj);
-        return res;
+        JavaObject_common<T> *res = 0;
+        if (attached())
+        {
+            res = new JavaObject_common<T>(env_, obj, desc);
+        }
+#ifdef __EXCEPTIONS_SUPPORT__
+        else
+        {
+            throw NotAttachedJENV();
+        }
+#endif
+        return std::shared_ptr<JavaObject_common<T> >(res);
+    }
+
+    template<typename T>
+    std::shared_ptr<JavaLocalRef<T> > createRef(const T &obj)
+    {
+        JavaLocalRef<T> *res = 0;
+        if (attached())
+        {
+            res = new JavaLocalRef<T>(env_, obj);
+        }
+#ifdef __EXCEPTIONS_SUPPORT__
+        else
+        {
+            throw NotAttachedJENV();
+        }
+#endif
+        return std::shared_ptr<JavaLocalRef<T> >(res);
+    }
+
+    template<typename T>
+    std::shared_ptr<JavaGlobalRef<T> > createGlobalRef(const T &obj)
+    {
+        JavaGlobalRef<T> *res = 0;
+        if (attached())
+        {
+            res = new JavaGlobalRef<T>(env_, obj);
+        }
+#ifdef __EXCEPTIONS_SUPPORT__
+        else
+        {
+            throw NotAttachedJENV();
+        }
+#endif
+        return std::shared_ptr<JavaGlobalRef<T> >(res);
     }
 
 };

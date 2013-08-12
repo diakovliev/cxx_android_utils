@@ -4,4 +4,4 @@
 ./javaobject_gen.sh android.content ContextWrapper ContextWrapper > ../jobjects/contextwrapper.h
 ./javaobject_gen.sh android.app Notification.Builder NotificationBuilder > ../jobjects/notificationbuilder.h
 ./javaobject_gen.sh android.app NotificationManager NotificationManager > ../jobjects/notificationmanager.h
-
+./javaobject_gen.sh android.R drawable drawable > ../jobjects/drawable.h

@@ -66,14 +66,14 @@ bool AttachedJENV::attached()
     return attached_;
 }
 
-ClassLoader *AttachedJENV::classLoader()
+std::shared_ptr<ClassLoader> AttachedJENV::classLoader()
 {
     if (!classLoader_.get())
     {
         // Create classLoader instance associated with current thread
         classLoader_.reset(AndroidContext::instance()->classLoader()->clone(env_));
     }
-    return classLoader_.get();
+    return classLoader_;
 }
 
 /***************************************************************************/
@@ -159,14 +159,19 @@ bool AndroidContext::initialize(JavaVM *jvm/*, JNIEnv* env*/)
                                                         QT_APPLICATION_GET_CLASS_LOADER_METHOD,
                                                         QT_APPLICATION_GET_CLASS_LOADER_METHOD_SIG);
 
-            jobject classLoader = env->NewGlobalRef(env->CallStaticObjectMethod(qtNativeClass_, methodID));
+            jobject classLoader = env->NewGlobalRef(env->CallStaticObjectMethod(qtNativeClass_, 
+																				methodID));
             if (!classLoader)
             {
                 LOG(ANDROID_LOG_ERROR, "Unable to get class loader");
             }
 
             jclass classLoaderClass = env->GetObjectClass(classLoader);
-            methodID = env->GetMethodID(classLoaderClass, CLASS_LOADER_LOAD_CLASS_METHOD, CLASS_LOADER_LOAD_CLASS_METHOD_SIG);
+
+            methodID = env->GetMethodID(classLoaderClass, 
+										CLASS_LOADER_LOAD_CLASS_METHOD, 
+										CLASS_LOADER_LOAD_CLASS_METHOD_SIG);
+
             classLoader_ = new ClassLoader(classLoader, methodID);
 
             methodID = env->GetStaticMethodID(qtNativeClass_,
@@ -178,7 +183,8 @@ bool AndroidContext::initialize(JavaVM *jvm/*, JNIEnv* env*/)
             if (!methodID)
             {
                 LOG(ANDROID_LOG_ERROR, "Can't find method '%s(%s)'",
-                                    QT_APPLICATION_GET_ACTIVITY_METHOD, QT_APPLICATION_GET_ACTIVITY_METHOD_SIG);
+                                    QT_APPLICATION_GET_ACTIVITY_METHOD, 
+									QT_APPLICATION_GET_ACTIVITY_METHOD_SIG);
             }
             else
             {
