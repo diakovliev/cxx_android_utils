@@ -15,15 +15,15 @@ public:
     void cancel(const char *tag, int id);
     void cancelAll();
 
-    static void freeJavaResources(std::weak_ptr<AttachedJENV> jvm_weak);
+    static void freeJavaResources(std::weak_ptr<AttachedJENV> jenv_weak);
 
 protected:
-    jint getIconIndex(std::weak_ptr<AttachedJENV> jvm_weak);
+    jint getIconIndex(std::weak_ptr<AttachedJENV> jenv_weak);
 
 private:
-    static bool getJavaNotificationManager(std::weak_ptr<AttachedJENV> jvm_weak);
-    static bool createJavaNotificationBuilder(std::weak_ptr<AttachedJENV> jvm_weak);
-    static bool initializeStatics(std::weak_ptr<AttachedJENV> jvm_weak);
+    static bool getJavaNotificationManager(std::weak_ptr<AttachedJENV> jenv_weak);
+    static bool createJavaNotificationBuilder(std::weak_ptr<AttachedJENV> jenv_weak);
+    static bool initializeStatics(std::weak_ptr<AttachedJENV> jenv_weak);
 
 private:
     static std::shared_ptr<JavaGlobalRef<jobject> > notificationManager_;

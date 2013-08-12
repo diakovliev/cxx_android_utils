@@ -45,6 +45,7 @@ enum JavaMethodFlags {
     Static 		= 0x0010,
     Final 		= 0x0020,
     Native 		= 0x0040,
+    Abstract	= 0x0080,
     /*-----------------*/
     Function	= 0x4000,
     Field		= 0x8000

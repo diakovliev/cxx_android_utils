@@ -2,7 +2,6 @@
 
 #include "notificationmanager.h"
 
-#define NOTIFICATION_SERVICE_NAME "notification"
 #define NOTIFICATION_MANAGER_TAG "NotificationManager"
 
 #define LOG(L,F, ...) __android_log_print(L, NOTIFICATION_MANAGER_TAG, F, ## __VA_ARGS__ )
@@ -12,10 +11,13 @@ std::shared_ptr<JavaGlobalRef<jobject> > NotificationManager::notificationBuilde
 
 namespace JavaObjects {
 
+#include "jobjects/context.h"
 #include "jobjects/contextwrapper.h"
 #include "jobjects/notificationbuilder.h"
 #include "jobjects/notificationmanager.h"
+#if 0
 #include "jobjects/drawable.h"
+#endif
 
 }
 
@@ -28,7 +30,7 @@ NotificationManager::~NotificationManager()
 {
 }
 
-void NotificationManager::freeJavaResources(std::weak_ptr<AttachedJENV> jvm_weak)
+void NotificationManager::freeJavaResources(std::weak_ptr<AttachedJENV> jenv_weak)
 {
     if (notificationManager_ && notificationBuilder_)
     {
@@ -36,34 +38,34 @@ void NotificationManager::freeJavaResources(std::weak_ptr<AttachedJENV> jvm_weak
         return;
     }
 
-    std::shared_ptr<AttachedJENV> jvm_ptr = jvm_weak.lock();
+    std::shared_ptr<AttachedJENV> jenv = jenv_weak.lock();
 
     if (notificationManager_)
     {
-        notificationManager_->deleteRef(jvm_ptr->env());
+        notificationManager_->deleteRef(jenv->env());
         notificationManager_.reset();
     }
 
     if (notificationBuilder_)
     {
-        notificationBuilder_->deleteRef(jvm_ptr->env());
+        notificationBuilder_->deleteRef(jenv->env());
         notificationBuilder_.reset();
     }
 }
 
-bool NotificationManager::createJavaNotificationBuilder(std::weak_ptr<AttachedJENV> jvm_weak)
+bool NotificationManager::createJavaNotificationBuilder(std::weak_ptr<AttachedJENV> jenv_weak)
 {
-    std::shared_ptr<AttachedJENV> jvm_ptr = jvm_weak.lock();
+    std::shared_ptr<AttachedJENV> jenv = jenv_weak.lock();
 
     bool ret = false;
     jvalue notificationBuilder;
     jclass notificationBuilderClass =
-            jvm_ptr->classLoader()->loadClass("android.app.Notification$Builder");
+            jenv->classLoader()->loadClass("android.app.Notification$Builder");
 
     /* As class loaded by me create local reference to avoid surprises from java GC */
-    std::shared_ptr<JavaLocalRef<jclass> > notifBuilderClassRef(jvm_ptr->createRef(notificationBuilderClass));
+    std::shared_ptr<JavaLocalRef<jclass> > notifBuilderClassRef(jenv->createRef(notificationBuilderClass));
 
-    jvm_ptr->exceptionsHandler(__FILE__, __LINE__);
+    jenv->exceptionsHandler(__FILE__, __LINE__);
 
     if (!notificationBuilderClass)
     {
@@ -71,7 +73,7 @@ bool NotificationManager::createJavaNotificationBuilder(std::weak_ptr<AttachedJE
         return ret;
     }
 
-    std::shared_ptr<JavaClass> jc = jvm_ptr->createJO(notifBuilderClassRef->get(), &JavaObjects::NotificationBuilder_Desc);
+    std::shared_ptr<JavaClass> jc = jenv->createJO(notifBuilderClassRef->get(), &JavaObjects::NotificationBuilder_Desc);
 
     notificationBuilder = jc->call("<init>", AndroidContext::instance()->activity());
     if (!notificationBuilder.l)
@@ -80,7 +82,7 @@ bool NotificationManager::createJavaNotificationBuilder(std::weak_ptr<AttachedJE
     }
     else
     {
-        notificationBuilder_ = jvm_ptr->createGlobalRef(notificationBuilder.l);
+        notificationBuilder_ = jenv->createGlobalRef(notificationBuilder.l);
     }
 
     LOG(ANDROID_LOG_INFO, "Notification.Builder instance created");
@@ -90,18 +92,23 @@ bool NotificationManager::createJavaNotificationBuilder(std::weak_ptr<AttachedJE
     return ret;
 }
 
-bool NotificationManager::getJavaNotificationManager(std::weak_ptr<AttachedJENV> jvm_weak)
+bool NotificationManager::getJavaNotificationManager(std::weak_ptr<AttachedJENV> jenv_weak)
 {
     bool ret = false;
 
-    std::shared_ptr<AttachedJENV> jvm_ptr = jvm_weak.lock();
+    std::shared_ptr<AttachedJENV> jenv = jenv_weak.lock();
 
-    std::shared_ptr<JavaObject> jactivity = jvm_ptr->createJO(AndroidContext::instance()->activity(),&JavaObjects::ContextWrapper_Desc);
+    std::shared_ptr<JavaObject> jactivity = jenv->createJO(AndroidContext::instance()->activity(),&JavaObjects::ContextWrapper_Desc);
+
+    std::shared_ptr<JavaLocalRef<jclass> > contextClassRef =
+            jenv->createRef(jenv->classLoader()->loadClass("android.content.Context"));
+
+    std::shared_ptr<JavaClass> context = jenv->createJO(contextClassRef->get(), &JavaObjects::Context_Desc);
 
     jvalue notificationManager = jactivity->call("getSystemService",
-                                          jvm_ptr->env()->NewStringUTF(NOTIFICATION_SERVICE_NAME));
+                                                 context->get("NOTIFICATION_SERVICE").l);
 
-    notificationManager_ = jvm_ptr->createGlobalRef(notificationManager.l);
+    notificationManager_ = jenv->createGlobalRef(notificationManager.l);
 
     LOG(ANDROID_LOG_INFO, "Notification service retrieved");
 
@@ -109,9 +116,9 @@ bool NotificationManager::getJavaNotificationManager(std::weak_ptr<AttachedJENV>
     return ret;
 }
 
-bool NotificationManager::initializeStatics(std::weak_ptr<AttachedJENV> jvm_weak)
+bool NotificationManager::initializeStatics(std::weak_ptr<AttachedJENV> jenv_weak)
 {
-    std::shared_ptr<AttachedJENV> jvm_ptr = jvm_weak.lock();
+    std::shared_ptr<AttachedJENV> jenv = jenv_weak.lock();
 
     bool init = true;
     if (!notificationManager_ || !notificationBuilder_)
@@ -119,11 +126,11 @@ bool NotificationManager::initializeStatics(std::weak_ptr<AttachedJENV> jvm_weak
         /* Initialize java objects */
         if (!notificationManager_ && init)
         {
-            init = init && getJavaNotificationManager(jvm_ptr);
+            init = init && getJavaNotificationManager(jenv);
         }
         if (!notificationBuilder_ && init)
         {
-            init = init && createJavaNotificationBuilder(jvm_ptr);
+            init = init && createJavaNotificationBuilder(jenv);
         }
         if (!init)
         {
@@ -133,19 +140,18 @@ bool NotificationManager::initializeStatics(std::weak_ptr<AttachedJENV> jvm_weak
     return init;
 }
 
-jint NotificationManager::getIconIndex(std::weak_ptr<AttachedJENV> jvm_weak)
+jint NotificationManager::getIconIndex(std::weak_ptr<AttachedJENV> jenv_weak)
 {
+    std::shared_ptr<AttachedJENV> jenv = jenv_weak.lock();
 #if 0
-    std::shared_ptr<AttachedJENV> jvm_ptr = jvm_weak.lock();
-
     jclass drawable_class =
-            jvm_ptr->classLoader()->loadClass("android.R.drawable");
+            jenv->classLoader()->loadClass("android.R.drawable");
 
     int sym_action_email = 0;
     if (drawable_class)
     {
-        std::shared_ptr<JavaLocalRef<jclass> > ref = jvm_ptr->createRef(drawable_class);
-        std::shared_ptr<JavaClass> drawable = jvm_ptr->createJO(drawable_class, &JavaObjects::drawable_Desc);
+        std::shared_ptr<JavaLocalRef<jclass> > ref = jenv->createRef(drawable_class);
+        std::shared_ptr<JavaClass> drawable = jenv->createJO(ref->get(), &JavaObjects::drawable_Desc);
         sym_action_email = drawable->get("sym_action_email").i;
     }
 
@@ -156,30 +162,30 @@ jint NotificationManager::getIconIndex(std::weak_ptr<AttachedJENV> jvm_weak)
 
 void NotificationManager::notify(jint id, const char *title, const char *text)
 {
-    std::shared_ptr<AttachedJENV> jvm_ptr(new AttachedJENV());
-    if (!jvm_ptr->attached())
+    std::shared_ptr<AttachedJENV> jenv(new AttachedJENV());
+    if (!jenv->attached())
     {
         LOG(ANDROID_LOG_ERROR, "Unable to get VM");
         return;
     }
 
-    if (!initializeStatics(jvm_ptr))
+    if (!initializeStatics(jenv))
     {
         LOG(ANDROID_LOG_ERROR, "Unable to init internal objects");
         return;
     }
 
-    std::shared_ptr<JavaObject> nb = jvm_ptr->createJO(notificationBuilder_->get(),
+    std::shared_ptr<JavaObject> nb = jenv->createJO(notificationBuilder_->get(),
                                                      &JavaObjects::NotificationBuilder_Desc);
     nb->call("setAutoCancel", (jboolean)JNI_TRUE);
-    nb->call("setContentTitle", jvm_ptr->env()->NewStringUTF(title));
-    nb->call("setContentText", jvm_ptr->env()->NewStringUTF(text));
-    nb->call("setSmallIcon", getIconIndex(jvm_ptr));
+    nb->call("setContentTitle", jenv->env()->NewStringUTF(title));
+    nb->call("setContentText", jenv->env()->NewStringUTF(text));
+    nb->call("setSmallIcon", getIconIndex(jenv));
     jvalue notification = nb->call("getNotification");
     if (notification.l)
     {
-        std::shared_ptr<JavaLocalRef<jobject> > notif(jvm_ptr->createRef(notification.l));
-        std::shared_ptr<JavaObject> nm = jvm_ptr->createJO(notificationManager_->get(),
+        std::shared_ptr<JavaLocalRef<jobject> > notif(jenv->createRef(notification.l));
+        std::shared_ptr<JavaObject> nm = jenv->createJO(notificationManager_->get(),
                                                          &JavaObjects::NotificationManager_Desc);
         nm->call("notify", id, notif->get());
 
@@ -193,32 +199,32 @@ void NotificationManager::notify(jint id, const char *title, const char *text)
 
 void NotificationManager::notify(const char *tag, int id, const char *title, const char *text)
 {
-    std::shared_ptr<AttachedJENV> jvm_ptr(new AttachedJENV());
-    if (!jvm_ptr->attached())
+    std::shared_ptr<AttachedJENV> jenv(new AttachedJENV());
+    if (!jenv->attached())
     {
         LOG(ANDROID_LOG_ERROR, "Unable to get VM");
         return;
     }
 
-    if (!initializeStatics(jvm_ptr))
+    if (!initializeStatics(jenv))
     {
         LOG(ANDROID_LOG_ERROR, "Unable to init internal objects");
         return;
     }
 
-    std::shared_ptr<JavaObject> nb = jvm_ptr->createJO(notificationBuilder_->get(),
+    std::shared_ptr<JavaObject> nb = jenv->createJO(notificationBuilder_->get(),
                                                      &JavaObjects::NotificationBuilder_Desc);
     nb->call("setAutoCancel", (jboolean)JNI_TRUE);
-    nb->call("setContentTitle", jvm_ptr->env()->NewStringUTF(title));
-    nb->call("setContentText", jvm_ptr->env()->NewStringUTF(text));
-    nb->call("setSmallIcon", getIconIndex(jvm_ptr));
+    nb->call("setContentTitle", jenv->env()->NewStringUTF(title));
+    nb->call("setContentText", jenv->env()->NewStringUTF(text));
+    nb->call("setSmallIcon", getIconIndex(jenv));
     jvalue notification = nb->call("getNotification");
     if (notification.l)
     {
-        std::shared_ptr<JavaLocalRef<jobject> > notif(jvm_ptr->createRef(notification.l));
-        std::shared_ptr<JavaObject> nm = jvm_ptr->createJO(notificationManager_->get(),
+        std::shared_ptr<JavaLocalRef<jobject> > notif(jenv->createRef(notification.l));
+        std::shared_ptr<JavaObject> nm = jenv->createJO(notificationManager_->get(),
                                                          &JavaObjects::NotificationManager_Desc);
-        nm->call("notify_0", jvm_ptr->env()->NewStringUTF(tag), id, notif->get());
+        nm->call("notify_0", jenv->env()->NewStringUTF(tag), id, notif->get());
 
         LOG(ANDROID_LOG_INFO, "Notification created succesfully");
     }
@@ -230,20 +236,20 @@ void NotificationManager::notify(const char *tag, int id, const char *title, con
 
 void NotificationManager::cancel(int id)
 {
-    std::shared_ptr<AttachedJENV> jvm_ptr(new AttachedJENV());
-    if (!jvm_ptr->attached())
+    std::shared_ptr<AttachedJENV> jenv(new AttachedJENV());
+    if (!jenv->attached())
     {
         LOG(ANDROID_LOG_ERROR, "Unable to get VM");
         return;
     }
 
-    if (!initializeStatics(jvm_ptr))
+    if (!initializeStatics(jenv))
     {
         LOG(ANDROID_LOG_ERROR, "Unable to init internal objects");
         return;
     }
 
-    std::shared_ptr<JavaObject> nm = jvm_ptr->createJO(notificationManager_->get(),
+    std::shared_ptr<JavaObject> nm = jenv->createJO(notificationManager_->get(),
                                                      &JavaObjects::NotificationManager_Desc);
     nm->call("cancel", id);
 
@@ -252,42 +258,42 @@ void NotificationManager::cancel(int id)
 
 void NotificationManager::cancel(const char *tag, int id)
 {
-    std::shared_ptr<AttachedJENV> jvm_ptr(new AttachedJENV());
-    if (!jvm_ptr->attached())
+    std::shared_ptr<AttachedJENV> jenv(new AttachedJENV());
+    if (!jenv->attached())
     {
         LOG(ANDROID_LOG_ERROR, "Unable to get VM");
         return;
     }
 
-    if (!initializeStatics(jvm_ptr))
+    if (!initializeStatics(jenv))
     {
         LOG(ANDROID_LOG_ERROR, "Unable to init internal objects");
         return;
     }
 
-    std::shared_ptr<JavaObject> nm = jvm_ptr->createJO(notificationManager_->get(),
+    std::shared_ptr<JavaObject> nm = jenv->createJO(notificationManager_->get(),
                                                      &JavaObjects::NotificationManager_Desc);
-    nm->call("cancel_1", jvm_ptr->env()->NewStringUTF(tag), id);
+    nm->call("cancel_1", jenv->env()->NewStringUTF(tag), id);
 
     LOG(ANDROID_LOG_INFO, "Notification tag:'%s' id:%d canceled succesfully", tag, id);
 }
 
 void NotificationManager::cancelAll()
 {
-    std::shared_ptr<AttachedJENV> jvm_ptr(new AttachedJENV());
-    if (!jvm_ptr->attached())
+    std::shared_ptr<AttachedJENV> jenv(new AttachedJENV());
+    if (!jenv->attached())
     {
         LOG(ANDROID_LOG_ERROR, "Unable to get VM");
         return;
     }
 
-    if (!initializeStatics(jvm_ptr))
+    if (!initializeStatics(jenv))
     {
         LOG(ANDROID_LOG_ERROR, "Unable to init internal objects");
         return;
     }
 
-    std::shared_ptr<JavaObject> nm = jvm_ptr->createJO(notificationManager_->get(),
+    std::shared_ptr<JavaObject> nm = jenv->createJO(notificationManager_->get(),
                                                      &JavaObjects::NotificationManager_Desc);
     nm->call("cancelAll");
 
