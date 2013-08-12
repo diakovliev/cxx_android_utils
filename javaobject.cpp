@@ -93,6 +93,15 @@ jvalue JavaObject_common<jobject>::call(const char *method_name, ...)
             LOG(ANDROID_LOG_ERROR, "Attempt to use non function member as function (%s)", method_name);
             return result;
         }
+        if (method->flags & (Abstract))
+        {
+            LOG(ANDROID_LOG_ERROR, "Attempt to call abstract method (%s)", method_name);
+            return result;
+        }
+        if (method->flags & (Native))
+        {
+            LOG(ANDROID_LOG_INFO, "Calling native method from the native code (%s)", method_name);
+        }
         if (method->flags & (Private|Protected))
         {
             LOG(ANDROID_LOG_INFO, "Attempt to call private or protected method (%s)", method_name);
@@ -350,6 +359,15 @@ jvalue JavaObject_common<jclass>::call(const char *method_name, ...)
             {
                 LOG(ANDROID_LOG_ERROR, "Attempt to use non function member as function (%s)", method_name);
                 return result;
+            }
+            if (method->flags & (Abstract))
+            {
+                LOG(ANDROID_LOG_ERROR, "Attempt to call abstract method (%s)", method_name);
+                return result;
+            }
+            if (method->flags & (Native))
+            {
+                LOG(ANDROID_LOG_INFO, "Calling native method from the native code (%s)", method_name);
             }
             if (method->flags & (Private|Protected))
             {
