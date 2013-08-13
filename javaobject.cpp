@@ -4,6 +4,30 @@
 
 #define LOG(L,F, ...) __android_log_print(L, "JavaObject", F, ## __VA_ARGS__ )
 
+template<class T>
+JavaMember *JavaObject_common<T>::findMember(const char *member_name)
+{
+    JavaMember *member = 0;
+    for (size_t i = 0; i < members_size_; ++i)
+    {
+        if (!strcmp(members_[i].uniq_name, member_name))
+        {
+            member = &members_[i];
+            break;
+        }
+    }
+    if (!member)
+    {
+        LOG(ANDROID_LOG_ERROR, "No member with uniq_name: %s", member_name);
+    }
+    else
+    {
+        LOG(ANDROID_LOG_INFO, "JavaMember: { t: %d, f: %d, u: %s, n: %s, s: %s } found",
+            member->type, member->flags, member->uniq_name, member->name, member->sig);
+    }
+    return member;
+}
+
 /************************ jobject *********************************/
 template<>
 JavaMemberId JavaObject_common<jobject>::getMemberId(JavaMember *member)
@@ -28,15 +52,15 @@ JavaMemberId JavaObject_common<jobject>::getMemberId(JavaMember *member)
                 }
                 if (!result.functionid)
                 {
-                    LOG(ANDROID_LOG_WARN, "No member with name: %s trying superclass", member->name);
+                    LOG(ANDROID_LOG_WARN, "No member with name: %s, trying superclass...", member->name);
                     env_->ExceptionClear();
                     /* try to find in superclass */
                     clazz = env_->GetSuperclass(clazz);
                 }
                 else
                 {
-                    LOG(ANDROID_LOG_INFO, "JavaMember: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } id found",
-                        result.functionid, member->type, member->flags, member->uniq_name, member->name, member->sig);
+                    LOG(ANDROID_LOG_INFO, "JavaMember: { t: %d, f: %d, u: %s, n: %s, s: %s } id: %p",
+                        member->type, member->flags, member->uniq_name, member->name, member->sig, result.functionid);
                     break;
                 }
             }
@@ -45,34 +69,11 @@ JavaMemberId JavaObject_common<jobject>::getMemberId(JavaMember *member)
         else
         {
             result = iter->second;
-            LOG(ANDROID_LOG_INFO, "JavaMember: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } id found in cache",
-                result.functionid, member->type, member->flags, member->uniq_name, member->name, member->sig);
+            LOG(ANDROID_LOG_INFO, "JavaMember: { t: %d, f: %d, u: %s, n: %s, s: %s } id: %p (cache)",
+                member->type, member->flags, member->uniq_name, member->name, member->sig, result.functionid);
         }
     }
     return result;
-}
-
-template<>
-JavaMember *JavaObject_common<jobject>::findMember(const char *method_name)
-{
-    JavaMember *member = 0;
-    for (size_t i = 0; i < members_size_; ++i)
-    {
-        if (!strcmp(members_[i].uniq_name, method_name))
-        {
-            member = &members_[i];
-            LOG(ANDROID_LOG_INFO, "JavaMember: { t: %d, f: %d, u: %s, n: %s, s: %s } found",
-                member->type, member->flags, member->uniq_name, member->name, member->sig);
-
-            break;
-        }
-    }
-
-    if (!member)
-    {
-        LOG(ANDROID_LOG_ERROR, "No method with name: %s", method_name);
-    }
-    return member;
 }
 
 template<>
@@ -84,7 +85,7 @@ jvalue JavaObject_common<jobject>::call(const char *method_name, ...)
     jvalue result;
     memset(&result, 0, sizeof(result));
 
-    JavaMember *method = JavaObject_common<jobject>::findMember(method_name);
+    JavaMember *method = findMember(method_name);
     JavaMemberId id = getMemberId(method);
     if (method && id.functionid)
     {
@@ -161,7 +162,7 @@ jvalue JavaObject_common<jobject>::get(const char *field_name)
     jvalue result;
     memset(&result, 0, sizeof(result));
 
-    JavaMember *field = JavaObject_common<jobject>::findMember(field_name);
+    JavaMember *field = findMember(field_name);
     JavaMemberId id = getMemberId(field);
     if (field && id.fieldid)
     {
@@ -221,7 +222,7 @@ jvalue JavaObject_common<jobject>::get(const char *field_name)
 template<>
 void JavaObject_common<jobject>::set(const char *field_name, jvalue value)
 {
-    JavaMember *field = JavaObject_common<jobject>::findMember(field_name);
+    JavaMember *field = findMember(field_name);
     JavaMemberId id = getMemberId(field);
     if (field && id.fieldid)
     {
@@ -291,53 +292,32 @@ JavaMemberId JavaObject_common<jclass>::getMemberId(JavaMember *member)
                 if (member->flags & Function)
                 {
                     result.functionid = env_->GetStaticMethodID(obj_, member->name, member->sig);
-                    LOG(ANDROID_LOG_INFO, "JavaMember: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } id found",
-                        result.functionid, member->type, member->flags, member->uniq_name, member->name, member->sig);
+                    LOG(ANDROID_LOG_INFO, "JavaMember: { t: %d, f: %d, u: %s, n: %s, s: %s } id: %p",
+                        member->type, member->flags, member->uniq_name, member->name, member->sig, result.functionid);
                 }
                 if (member->flags & Field)
                 {
                     result.fieldid = env_->GetStaticFieldID(obj_, member->name, member->sig);
-                    LOG(ANDROID_LOG_INFO, "JavaMember: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } id found",
-                        result.fieldid, member->type, member->flags, member->uniq_name, member->name, member->sig);
+                    LOG(ANDROID_LOG_INFO, "JavaMember: { t: %d, f: %d, u: %s, n: %s, s: %s } id: %p",
+                        member->type, member->flags, member->uniq_name, member->name, member->sig, result.functionid);
                 }
             }
             else
             {
                 result.functionid = env_->GetMethodID(obj_, member->name, member->sig);
-                LOG(ANDROID_LOG_INFO, "JavaMember: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } id found",
-                    result.functionid, member->type, member->flags, member->uniq_name, member->name, member->sig);
+                LOG(ANDROID_LOG_INFO, "JavaMember: { t: %d, f: %d, u: %s, n: %s, s: %s } id: %p",
+                    member->type, member->flags, member->uniq_name, member->name, member->sig, result.functionid);
             }
             members_ids_[member->uniq_name] = result;
         }
         else
         {
             result = iter->second;
-            LOG(ANDROID_LOG_INFO, "JavaMember: { id: %p, t: %d, f: %d, u: %s, n: %s, s: %s } id found in cache",
-                result.functionid, member->type, member->flags, member->uniq_name, member->name, member->sig);
+            LOG(ANDROID_LOG_INFO, "JavaMember: { t: %d, f: %d, u: %s, n: %s, s: %s } id: %p (cache)",
+                member->type, member->flags, member->uniq_name, member->name, member->sig, result.functionid);
         }
     }
     return result;
-}
-
-template<>
-JavaMember *JavaObject_common<jclass>::findMember(const char *member_name)
-{
-    JavaMember *member = 0;
-    for (size_t i = 0; i < members_size_; ++i)
-    {
-        if (!strcmp(members_[i].uniq_name, member_name))
-        {
-            member = &members_[i];
-            LOG(ANDROID_LOG_INFO, "JavaMember: { t: %d, f: %d, u: %s, n: %s, s: %s } found",
-                member->type, member->flags, member->uniq_name, member->name, member->sig);
-            break;
-        }
-    }
-    if (!member)
-    {
-        LOG(ANDROID_LOG_ERROR, "No member with name: %s", member_name);
-    }
-    return member;
 }
 
 template<>
@@ -349,7 +329,7 @@ jvalue JavaObject_common<jclass>::call(const char *method_name, ...)
     jvalue result;
     memset(&result, 0, sizeof(result));
 
-    JavaMember *method = JavaObject_common<jclass>::findMember(method_name);
+    JavaMember *method = findMember(method_name);
     JavaMemberId id = getMemberId(method);
     if (method && id.functionid)
     {
@@ -446,7 +426,7 @@ jvalue JavaObject_common<jclass>::get(const char *field_name)
     jvalue result;
     memset(&result, 0, sizeof(result));
 
-    JavaMember *field = JavaObject_common<jclass>::findMember(field_name);
+    JavaMember *field = findMember(field_name);
     JavaMemberId id = getMemberId(field);
     if (field && id.fieldid)
     {
@@ -506,7 +486,7 @@ jvalue JavaObject_common<jclass>::get(const char *field_name)
 template<>
 void JavaObject_common<jclass>::set(const char *field_name, jvalue value)
 {
-    JavaMember *field = JavaObject_common<jclass>::findMember(field_name);
+    JavaMember *field = findMember(field_name);
     JavaMemberId id = getMemberId(field);
     if (field && id.fieldid)
     {

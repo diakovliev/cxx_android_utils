@@ -69,7 +69,7 @@ struct JavaObjectDesc {
     size_t msize;
 };
 
-template<typename T>
+template<class T>
 class JavaObject_common {
 public:
 
@@ -106,7 +106,7 @@ public:
     void set(const char *field_name, jvalue value);
 
 protected:
-    JavaMember *findMember(const char *method_name);
+    JavaMember *findMember(const char *member_name);
     JavaMemberId getMemberId(JavaMember *member);
 
 private:
@@ -121,8 +121,6 @@ private:
 
 /************************ jobject *********************************/
 template<>
-JavaMember *JavaObject_common<jobject>::findMember(const char *member_name);
-template<>
 JavaMemberId JavaObject_common<jobject>::getMemberId(JavaMember *member);
 template<>
 jvalue JavaObject_common<jobject>::call(const char *method_name, ...);
@@ -134,8 +132,6 @@ template<>
 void JavaObject_common<jobject>::set(const char *field_name, jvalue value);
 
 /************************ jclass *********************************/
-template<>
-JavaMember *JavaObject_common<jclass>::findMember(const char *member_name);
 template<>
 JavaMemberId JavaObject_common<jclass>::getMemberId(JavaMember *member);
 template<>
