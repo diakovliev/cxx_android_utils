@@ -30,9 +30,10 @@ NotificationManager::~NotificationManager()
 {
 }
 
+
 void NotificationManager::freeJavaResources(std::weak_ptr<AttachedJENV> jenv_weak)
 {
-    if (notificationManager_ && notificationBuilder_)
+    if (!notificationManager_ && !notificationBuilder_)
     {
         LOG(ANDROID_LOG_INFO, "Nothing to free");
         return;
