@@ -128,7 +128,7 @@ ClassLoader *AndroidContext::classLoader()
     return classLoader_;
 }
 
-bool AndroidContext::initialize(JavaVM *jvm/*, JNIEnv* env*/)
+bool AndroidContext::initialize(JavaVM *jvm)
 {
     bool res = false;
 
